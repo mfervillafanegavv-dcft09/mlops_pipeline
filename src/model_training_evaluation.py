@@ -14,7 +14,7 @@ from sklearn.metrics import (
     roc_auc_score
 )
 
-from ft_engineering import prepare_data
+from src.ft_engineering import prepare_data
 
 
 def build_model(preprocessor, classifier):
@@ -49,73 +49,89 @@ def summarize_classification(model_name, model, X_test, y_test):
 
     return metrics
 
+def train_deployment_model(preprocessor, X_train, y_train):
+    """
+    Entrena el modelo seleccionado para el despliegue.
 
-# Carga y preparación de los datos
-X_train, X_test, y_train, y_test, preprocessor = prepare_data(
-    "Base_de_datos.csv"
-)
+    Se utiliza Random Forest porque, en la comparación inicial,
+    presentó el mayor Recall y F1-score.
+    """
 
-
-# Definición de los modelos
-classifiers = {
-    "Regresión Logística": LogisticRegression(
-        max_iter=1000,
-        random_state=42
-    ),
-
-    "Random Forest": RandomForestClassifier(
+    classifier = RandomForestClassifier(
         n_estimators=200,
         random_state=42,
         class_weight="balanced"
-    ),
-
-    "Gradient Boosting": GradientBoostingClassifier(
-        random_state=42
     )
-}
-
-
-# Entrenamiento y evaluación
-results = []
-
-for model_name, classifier in classifiers.items():
 
     model = build_model(preprocessor, classifier)
 
     model.fit(X_train, y_train)
 
-    metrics = summarize_classification(
-        model_name,
-        model,
-        X_test,
-        y_test
+    return model
+
+def main():
+
+    X_train, X_test, y_train, y_test, preprocessor = prepare_data(
+        "Base_de_datos.csv"
     )
 
-    results.append(metrics)
+    classifiers = {
+        "Regresión Logística": LogisticRegression(
+            max_iter=1000,
+            random_state=42
+        ),
+
+        "Random Forest": RandomForestClassifier(
+            n_estimators=200,
+            random_state=42,
+            class_weight="balanced"
+        ),
+
+        "Gradient Boosting": GradientBoostingClassifier(
+            random_state=42
+        )
+    }
+
+    results = []
+
+    for model_name, classifier in classifiers.items():
+
+        model = build_model(preprocessor, classifier)
+
+        model.fit(X_train, y_train)
+
+        metrics = summarize_classification(
+            model_name,
+            model,
+            X_test,
+            y_test
+        )
+
+        results.append(metrics)
+
+    results_df = pd.DataFrame(results)
+
+    print("\n--- Comparación de modelos ---")
+    print(results_df.round(4))
+
+    results_plot = results_df.set_index("Modelo")
+
+    results_plot[
+        ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
+    ].plot(
+        kind="bar",
+        figsize=(10, 6)
+    )
+
+    plt.title("Comparación de métricas por modelo")
+    plt.ylabel("Valor de la métrica")
+    plt.xlabel("Modelo")
+    plt.ylim(0, 1)
+    plt.xticks(rotation=0)
+    plt.legend(title="Métrica")
+    plt.tight_layout()
+    plt.show()
 
 
-# Tabla comparativa
-results_df = pd.DataFrame(results)
-
-print("\n--- Comparación de modelos ---")
-print(results_df.round(4))
-
-
-# Gráfico comparativo
-results_plot = results_df.set_index("Modelo")
-
-results_plot[
-    ["Accuracy", "Precision", "Recall", "F1-score", "ROC-AUC"]
-].plot(
-    kind="bar",
-    figsize=(10, 6)
-)
-
-plt.title("Comparación de métricas por modelo")
-plt.ylabel("Valor de la métrica")
-plt.xlabel("Modelo")
-plt.ylim(0, 1)
-plt.xticks(rotation=0)
-plt.legend(title="Métrica")
-plt.tight_layout()
-plt.show()
+if __name__ == "__main__":
+    main()
