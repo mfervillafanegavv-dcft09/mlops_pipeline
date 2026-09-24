@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
+from typing import List
 
 from src.ft_engineering import prepare_data
 from src.model_training_evaluation import train_deployment_model
@@ -60,4 +61,32 @@ def predict_churn(customer: CustomerData):
     return {
         "churn_prediction": int(prediction),
         "churn_probability": round(float(probability), 4)
+    }
+
+@app.post("/predict-batch")
+def predict_churn_batch(customers: List[CustomerData]):
+
+    customers_df = pd.DataFrame(
+        [customer.model_dump() for customer in customers]
+    )
+
+    predictions = model.predict(customers_df)
+    probabilities = model.predict_proba(customers_df)[:, 1]
+
+    results = []
+
+    for prediction, probability in zip(
+        predictions,
+        probabilities
+    ):
+        results.append({
+            "churn_prediction": int(prediction),
+            "churn_probability": round(
+                float(probability),
+                4
+            )
+        })
+
+    return {
+        "predictions": results
     }
